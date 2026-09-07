@@ -1,1 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 4h16v16H4z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="2"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-81.5 -81.5 163 163">
+  <defs>
+    <clipPath id="pylon-disc"><circle r="81.5"/></clipPath>
+  </defs>
+  <g fill="#4F46E5">
+    <circle r="71.5" fill="none" stroke="#4F46E5" stroke-width="20"/>
+    <g clip-path="url(#pylon-disc)">
+      <rect x="-10.5" y="-81.5" width="21" height="163"/>
+      <rect x="-81.5" y="-44.5" width="92" height="21"/>
+      <rect x="-81.5" y="-10.5" width="92" height="21"/>
+      <rect x="-81.5" y="23.5" width="92" height="21"/>
+    </g>
+  </g>
+</svg>
