@@ -1,0 +1,8 @@
+group: io.kestra.plugin.pylon.issue
+name: "pylon-issue"
+title: "Pylon Issues"
+description: "Tasks and a trigger for creating, listing, updating, and replying to Pylon support issues (tickets)."
+body: "Create, fetch, list, and update Pylon issues; post customer-facing replies or internal notes; and react to new or updated issues with a polling trigger."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

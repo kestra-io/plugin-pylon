@@ -1,8 +1,8 @@
 group: io.kestra.plugin.pylon
 name: "pylon"
 title: "Pylon"
-description: "Pylon plugin for Kestra"
-body: ""
+description: "Create, update, and reply to Pylon support tickets, and react to new or updated ones with a polling trigger."
+body: "Manage Pylon support issues (tickets) from a Kestra flow: create, fetch, list, and update issues, post customer-facing replies or internal notes, and trigger a flow when an issue is created or updated."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"
