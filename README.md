@@ -39,14 +39,16 @@
 
 ## Why
 
-- What user problem does this solve? Teams need a concrete starting point for building and validating new Kestra plugins without recreating the same project scaffolding from scratch.
-- Why would a team adopt this plugin in a workflow? It gives plugin authors a ready-made reference repo they can adapt alongside their own build, test, and publishing workflow.
-- What operational/business outcome does it enable? It shortens plugin delivery time, reduces setup mistakes, and makes internal or partner plugin development more repeatable.
+- Teams that route support workflows through [Pylon](https://usepylon.com) currently script ticket creation,
+  updates, and polling for new issues by hand. This plugin lets a Kestra flow create or update a Pylon issue,
+  post a customer-facing reply or internal note, and react to new or updated issues via a polling trigger.
+- It complements existing ticketing/issue-tracker plugins (`plugin-zendesk`, `plugin-jira`, `plugin-linear`) and
+  fills the same role for Pylon.
 
 ## What
 
-- Provides plugin components under `io.kestra.plugin.pylon`.
-- Includes classes such as `Example`, `Trigger`.
+- Provides plugin components under `io.kestra.plugin.pylon` (`AbstractPylon`, `PylonClient`) and
+  `io.kestra.plugin.pylon.issue` (`List`, `Get`, `Create`, `Update`, `Reply`, `AddNote`, `Trigger`).
 
 ## Documentation
 * Full documentation can be found under: [kestra.io/docs](https://kestra.io/docs)

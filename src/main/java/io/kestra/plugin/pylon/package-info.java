@@ -1,7 +1,7 @@
 @PluginSubGroup(
     title = "Pylon",
-    description = "Pylon plugin for Kestra",
-    categories = PluginSubGroup.PluginCategory.DATA
+    description = "Manage Pylon support tickets: create, update, reply to, and react to issues from a Kestra flow.",
+    categories = PluginSubGroup.PluginCategory.BUSINESS
 )
 package io.kestra.plugin.pylon;
 
