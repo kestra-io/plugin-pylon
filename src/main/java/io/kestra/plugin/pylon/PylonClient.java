@@ -4,10 +4,14 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.http.HttpRequest;
 import io.kestra.core.http.HttpResponse;
 import io.kestra.core.http.client.HttpClient;
 import io.kestra.core.http.client.HttpClientResponseException;
+import io.kestra.core.http.client.configurations.HttpConfiguration;
+import io.kestra.core.http.client.configurations.TimeoutConfiguration;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
 import lombok.Getter;
@@ -18,6 +22,7 @@ import java.io.Closeable;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -39,6 +44,8 @@ public final class PylonClient implements Closeable {
     private static final long MAX_RETRY_AFTER_SECONDS = 60;
     /** Safety cap on `/issues` cursor pagination so a `has_next_page=true` response with a stuck cursor can't loop forever. */
     private static final int MAX_PAGES = 1000;
+    private static final Duration HTTP_CONNECT_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration HTTP_READ_IDLE_TIMEOUT = Duration.ofSeconds(30);
 
     private final RunContext runContext;
     private final HttpClient httpClient;
@@ -50,6 +57,25 @@ public final class PylonClient implements Closeable {
         this.httpClient = httpClient;
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.apiToken = apiToken;
+    }
+
+    /**
+     * Builds a client with the plugin's shared HTTP timeout configuration. The single place where
+     * an {@link HttpClient} is constructed, so tasks (via {@link AbstractPylon#client}) and the
+     * polling trigger cannot drift apart when the timeout tuning changes.
+     */
+    public static PylonClient connect(RunContext runContext, String baseUrl, String apiToken) throws IllegalVariableEvaluationException {
+        var httpClient = HttpClient.builder()
+            .runContext(runContext)
+            .configuration(HttpConfiguration.builder()
+                .timeout(TimeoutConfiguration.builder()
+                    .connectTimeout(Property.ofValue(HTTP_CONNECT_TIMEOUT))
+                    .readIdleTimeout(Property.ofValue(HTTP_READ_IDLE_TIMEOUT))
+                    .build())
+                .build())
+            .build();
+
+        return new PylonClient(runContext, httpClient, baseUrl, apiToken);
     }
 
     public Map<String, Object> getForData(String path, String action) throws Exception {

@@ -5,6 +5,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.utils.IdUtils;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
@@ -39,6 +40,8 @@ class CreateTest {
                 """)));
 
         var task = Create.builder()
+            .id(IdUtils.create())
+            .type(Create.class.getName())
             .baseUrl(Property.ofValue(wireMockRuntimeInfo.getHttpBaseUrl()))
             .apiToken(Property.ofValue("test-token"))
             .title(Property.ofValue("Cannot log in"))
@@ -72,6 +75,8 @@ class CreateTest {
                 """)));
 
         var task = Create.builder()
+            .id(IdUtils.create())
+            .type(Create.class.getName())
             .baseUrl(Property.ofValue(wireMockRuntimeInfo.getHttpBaseUrl()))
             .apiToken(Property.ofValue("test-token"))
             .title(Property.ofValue("Cannot log in"))
@@ -97,6 +102,8 @@ class CreateTest {
                 """)));
 
         var task = Create.builder()
+            .id(IdUtils.create())
+            .type(Create.class.getName())
             .baseUrl(Property.ofValue(wireMockRuntimeInfo.getHttpBaseUrl()))
             .apiToken(Property.ofValue("test-token"))
             .title(Property.ofValue("Cannot log in"))
@@ -112,6 +119,8 @@ class CreateTest {
     @Test
     void missingTitleFailsFastWithoutHttpCall(WireMockRuntimeInfo wireMockRuntimeInfo) {
         var task = Create.builder()
+            .id(IdUtils.create())
+            .type(Create.class.getName())
             .baseUrl(Property.ofValue(wireMockRuntimeInfo.getHttpBaseUrl()))
             .apiToken(Property.ofValue("test-token"))
             .bodyHtml(Property.ofValue("<p>Help</p>"))

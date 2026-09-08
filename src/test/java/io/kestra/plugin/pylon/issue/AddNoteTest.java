@@ -5,6 +5,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.utils.IdUtils;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
@@ -35,6 +36,8 @@ class AddNoteTest {
                 """)));
 
         var task = AddNote.builder()
+            .id(IdUtils.create())
+            .type(AddNote.class.getName())
             .baseUrl(Property.ofValue(wireMockRuntimeInfo.getHttpBaseUrl()))
             .apiToken(Property.ofValue("test-token"))
             .issueId(Property.ofValue("issue-42"))

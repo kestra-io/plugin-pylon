@@ -53,7 +53,11 @@ it without repeating it in each flow.
 issue whose `updated_at` is newer than the last delivered watermark (persisted in the flow's namespace KV store, so
 issues are never re-delivered even across worker restarts). On the first poll, only the baseline is recorded — no
 execution fires — seeded to `now - lookbackPeriod` (default `PT0S`) so enabling the trigger does not replay the
-entire backlog. Output includes `issues` (the full list of matched issue objects) and `count`.
+entire backlog. Output includes `issues` (the matched issue objects, oldest first) and `count`.
+
+Each execution carries at most `maxIssuesPerExecution` issues (default `1000`): a burst of updates — a long trigger
+downtime, or a bulk edit in Pylon — delivers the oldest issues first and leaves the rest behind the watermark for the
+following poll(s), rather than building one oversized execution payload.
 
 Assumption worth flagging: Pylon's `GET /issues` time-range filter is not documented as filtering on a specific
 timestamp field. This trigger assumes it is (or includes) `updated_at`, since that is the only interpretation

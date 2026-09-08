@@ -6,6 +6,7 @@ import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.utils.IdUtils;
 import io.kestra.core.serializers.FileSerde;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,8 @@ class ListTest {
 
     private List.ListBuilder<?, ?> task(WireMockRuntimeInfo wireMockRuntimeInfo) {
         return List.builder()
+            .id(IdUtils.create())
+            .type(List.class.getName())
             .baseUrl(Property.ofValue(wireMockRuntimeInfo.getHttpBaseUrl()))
             .apiToken(Property.ofValue("test-token"));
     }

@@ -1,8 +1,5 @@
 package io.kestra.plugin.pylon;
 
-import io.kestra.core.http.client.HttpClient;
-import io.kestra.core.http.client.configurations.HttpConfiguration;
-import io.kestra.core.http.client.configurations.TimeoutConfiguration;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Task;
@@ -16,13 +13,11 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
-import java.time.Duration;
-
 /**
  * Connection base class for every Pylon task. A {@link io.kestra.core.models.triggers.AbstractTrigger}
  * cannot extend {@code Task}, so {@code io.kestra.plugin.pylon.issue.Trigger} redeclares
  * {@link #apiToken}/{@link #baseUrl} — kept in lockstep via the shared title/description constants
- * below. The HTTP call logic itself lives once in {@link PylonClient}, built by {@link #client}.
+ * below. The HTTP call logic and client construction live once in {@link PylonClient}.
  */
 @SuperBuilder
 @ToString
@@ -44,9 +39,6 @@ public abstract class AbstractPylon extends Task {
         Base URL of the Pylon API. Defaults to the US region (`https://api.usepylon.com`); override \
         with `https://api.eu.usepylon.com` for the EU region.""";
 
-    private static final Duration HTTP_CONNECT_TIMEOUT = Duration.ofSeconds(10);
-    private static final Duration HTTP_READ_IDLE_TIMEOUT = Duration.ofSeconds(30);
-
     @Schema(title = API_TOKEN_TITLE, description = API_TOKEN_DESCRIPTION)
     @NotNull
     @PluginProperty(secret = true, group = "connection")
@@ -67,16 +59,6 @@ public abstract class AbstractPylon extends Task {
         }
         var rBaseUrl = runContext.render(this.baseUrl).as(String.class).orElse(DEFAULT_BASE_URL);
 
-        var httpClient = HttpClient.builder()
-            .runContext(runContext)
-            .configuration(HttpConfiguration.builder()
-                .timeout(TimeoutConfiguration.builder()
-                    .connectTimeout(Property.ofValue(HTTP_CONNECT_TIMEOUT))
-                    .readIdleTimeout(Property.ofValue(HTTP_READ_IDLE_TIMEOUT))
-                    .build())
-                .build())
-            .build();
-
-        return new PylonClient(runContext, httpClient, rBaseUrl, rApiToken);
+        return PylonClient.connect(runContext, rBaseUrl, rApiToken);
     }
 }

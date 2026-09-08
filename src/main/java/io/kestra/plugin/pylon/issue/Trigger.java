@@ -2,9 +2,6 @@ package io.kestra.plugin.pylon.issue;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.kestra.core.http.client.HttpClient;
-import io.kestra.core.http.client.configurations.HttpConfiguration;
-import io.kestra.core.http.client.configurations.TimeoutConfiguration;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -38,10 +35,13 @@ import org.slf4j.Logger;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.PriorityQueue;
 import java.util.Set;
 
 @SuperBuilder
@@ -53,9 +53,9 @@ import java.util.Set;
     title = "Trigger a flow on new or updated Pylon issues",
     description = """
         Polls `GET /issues` at the configured interval and fires one execution per poll carrying \
-        every issue whose `updated_at` is newer than the last delivered watermark, so no issue is \
-        re-delivered — the watermark is persisted in the flow's namespace KV store, keyed by flow \
-        and trigger ID. On first activation, only the current baseline is recorded (seeded to \
+        the issues whose `updated_at` is newer than the last delivered watermark, oldest first and up \
+        to `maxIssuesPerExecution` per execution, so no issue is re-delivered. The watermark is \
+        persisted in the flow's namespace KV store, keyed by flow and trigger ID. On first activation, only the current baseline is recorded (seeded to \
         `now - lookbackPeriod`) — no execution fires — to avoid replaying the entire backlog. Equal \
         `updated_at` timestamps are compared strictly (`>`), and issues sharing the newest \
         `updated_at` are tracked individually so a same-instant tie is neither skipped nor re-fired.
@@ -90,9 +90,8 @@ import java.util.Set;
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output> {
 
     private static final ObjectMapper MAPPER = JacksonMapper.ofJson();
-    private static final Duration HTTP_CONNECT_TIMEOUT = Duration.ofSeconds(10);
-    private static final Duration HTTP_READ_IDLE_TIMEOUT = Duration.ofSeconds(30);
     private static final int DEFAULT_LIMIT = 100;
+    private static final int DEFAULT_MAX_ISSUES_PER_EXECUTION = 1000;
 
     // Duplicated from AbstractPylon (a Trigger cannot extend Task) — kept in lockstep via the
     // shared title/description/default constants so both declarations evolve together.
@@ -131,6 +130,14 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @PluginProperty(group = "processing")
     private Property<@Min(1) @Max(20000) Integer> limit = Property.ofValue(DEFAULT_LIMIT);
 
+    @Schema(
+        title = "Maximum issues delivered per execution",
+        description = "Caps how many issues a single fired execution carries, so a burst of updates (a long trigger downtime, a bulk edit in Pylon) cannot produce an oversized execution payload. The oldest issues are delivered first; the remainder stays behind the watermark and is delivered by the following poll(s). Defaults to 1000."
+    )
+    @Builder.Default
+    @PluginProperty(group = "processing")
+    private Property<@Min(1) Integer> maxIssuesPerExecution = Property.ofValue(DEFAULT_MAX_ISSUES_PER_EXECUTION);
+
     @Override
     public Duration getInterval() {
         return this.interval;
@@ -154,6 +161,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         var rBaseUrl = runContext.render(this.baseUrl).as(String.class).orElse(AbstractPylon.DEFAULT_BASE_URL);
         var rLimit = runContext.render(this.limit).as(Integer.class).orElse(DEFAULT_LIMIT);
         var rLookback = runContext.render(this.lookbackPeriod).as(Duration.class).orElse(Duration.ZERO);
+        var rMaxIssues = runContext.render(this.maxIssuesPerExecution).as(Integer.class).orElse(DEFAULT_MAX_ISSUES_PER_EXECUTION);
 
         var now = Instant.now();
 
@@ -164,28 +172,30 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             return Optional.empty();
         }
 
-        var httpClient = HttpClient.builder()
-            .runContext(runContext)
-            .configuration(HttpConfiguration.builder()
-                .timeout(TimeoutConfiguration.builder()
-                    .connectTimeout(Property.ofValue(HTTP_CONNECT_TIMEOUT))
-                    .readIdleTimeout(Property.ofValue(HTTP_READ_IDLE_TIMEOUT))
-                    .build())
-                .build())
-            .build();
+        try (var client = PylonClient.connect(runContext, rBaseUrl, rApiToken)) {
+            var batch = new OldestFirstBatch(rMaxIssues);
+            client.walkIssues(watermark.getTimestamp(), now, rLimit, "poll Pylon issues", page -> page.forEach(issue -> {
+                if (issue.get("updated_at") == null || issue.get("id") == null) {
+                    return;
+                }
+                var id = String.valueOf(issue.get("id"));
+                var updatedAt = parseUpdatedAt(issue.get("updated_at"), id);
+                if (isNewerThanWatermark(updatedAt, id, watermark)) {
+                    batch.offer(updatedAt, issue);
+                }
+            }));
 
-        try (var client = new PylonClient(runContext, httpClient, rBaseUrl, rApiToken)) {
-            var issues = client.listAllIssues(watermark.getTimestamp(), now, rLimit, "poll Pylon issues");
-
-            var candidates = issues.stream()
-                .filter(issue -> issue.get("updated_at") != null && issue.get("id") != null)
-                .map(issue -> Map.entry(Instant.parse(String.valueOf(issue.get("updated_at"))), issue))
-                .filter(entry -> isNewerThanWatermark(entry.getKey(), String.valueOf(entry.getValue().get("id")), watermark))
-                .sorted(Map.Entry.comparingByKey())
-                .toList();
+            var candidates = batch.oldestFirst();
 
             if (candidates.isEmpty()) {
                 return Optional.empty();
+            }
+
+            if (batch.matched() > candidates.size()) {
+                logger.warn(
+                    "Pylon issue trigger matched {} issue(s) updated since {} but delivers only the oldest {} in this execution ('maxIssuesPerExecution'); the rest stays behind the watermark and is delivered by the next poll(s).",
+                    batch.matched(), watermark.getTimestamp(), candidates.size()
+                );
             }
 
             var newestTimestamp = candidates.getLast().getKey();
@@ -206,6 +216,17 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             persistWatermark(kv, key, new Watermark(newestTimestamp, boundaryIds), logger);
 
             return Optional.of(execution);
+        }
+    }
+
+    private Instant parseUpdatedAt(Object rawUpdatedAt, String issueId) {
+        try {
+            return Instant.parse(String.valueOf(rawUpdatedAt));
+        } catch (DateTimeParseException e) {
+            throw new IllegalStateException(
+                "Unparseable 'updated_at' on Pylon issue '" + issueId + "': '" + rawUpdatedAt +
+                    "' is not an ISO-8601 instant — the trigger cannot place it against its watermark.", e
+            );
         }
     }
 
@@ -277,6 +298,41 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                 "Unparseable Pylon trigger watermark '" + raw + "' — refusing to silently treat this as the first " +
                     "poll, which would re-seed the baseline and drop the backlog: " + e.getMessage(), e
             );
+        }
+    }
+
+    /**
+     * Keeps only the oldest {@code capacity} matched issues while `/issues` pages stream in, so
+     * neither the in-memory buffer nor the execution payload grows with the number of matches.
+     * Evicted issues are all at or after the delivered watermark, so a later poll picks them up.
+     */
+    private static final class OldestFirstBatch {
+        private final int capacity;
+        private final PriorityQueue<Map.Entry<Instant, Map<String, Object>>> newestFirst;
+        private int matched;
+
+        private OldestFirstBatch(int capacity) {
+            this.capacity = capacity;
+            this.newestFirst = new PriorityQueue<>(
+                Comparator.<Map.Entry<Instant, Map<String, Object>>, Instant>comparing(Map.Entry::getKey).reversed()
+            );
+        }
+
+        private void offer(Instant updatedAt, Map<String, Object> issue) {
+            this.matched++;
+            this.newestFirst.add(Map.entry(updatedAt, issue));
+            if (this.newestFirst.size() > this.capacity) {
+                this.newestFirst.poll();
+            }
+        }
+
+        /** Total number of issues newer than the watermark, including those evicted by the cap. */
+        private int matched() {
+            return this.matched;
+        }
+
+        private List<Map.Entry<Instant, Map<String, Object>>> oldestFirst() {
+            return this.newestFirst.stream().sorted(Map.Entry.comparingByKey()).toList();
         }
     }
 
