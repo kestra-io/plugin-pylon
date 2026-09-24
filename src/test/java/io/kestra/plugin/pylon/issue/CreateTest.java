@@ -21,6 +21,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @KestraTest
@@ -36,7 +37,7 @@ class CreateTest {
                 {"title": "Cannot log in", "body_html": "<p>Help</p>", "requester_email": "customer@example.com", "tags": ["bug"]}
                 """))
             .willReturn(okJson("""
-                {"data": {"id": "issue-1", "number": 1, "title": "Cannot log in", "state": "new"}}
+                {"data": {"id": "issue-1", "number": 1, "title": "Cannot log in", "state": "new", "link": "https://app.usepylon.com/issues?issueNumber=1"}}
                 """)));
 
         var task = Create.builder()
@@ -54,6 +55,8 @@ class CreateTest {
 
         assertThat(output.getIssueId(), is("issue-1"));
         assertThat(output.getIssue().get("title"), is("Cannot log in"));
+        assertThat(output.getIssueUrl(), is("https://app.usepylon.com/issues?issueNumber=1"));
+        assertThat(output.getIssueNumber(), is(1));
     }
 
     @Test
@@ -91,6 +94,7 @@ class CreateTest {
         var output = task.run(runContextFactory.of(Map.of()));
 
         assertThat(output.getIssueId(), is("issue-2"));
+        assertThat(output.getIssueUrl(), is(nullValue()));
     }
 
     @Test
