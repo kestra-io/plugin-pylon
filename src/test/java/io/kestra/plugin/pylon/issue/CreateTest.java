@@ -74,7 +74,7 @@ class CreateTest {
                 }
                 """, true, false))
             .willReturn(okJson("""
-                {"data": {"id": "issue-2", "number": 2, "title": "Cannot log in"}}
+                {"data": {"id": "issue-2", "title": "Cannot log in"}}
                 """)));
 
         var task = Create.builder()
@@ -95,6 +95,28 @@ class CreateTest {
 
         assertThat(output.getIssueId(), is("issue-2"));
         assertThat(output.getIssueUrl(), is(nullValue()));
+        assertThat(output.getIssueNumber(), is(nullValue()));
+    }
+
+    @Test
+    void nonNumericNumberYieldsNullIssueNumber(WireMockRuntimeInfo wireMockRuntimeInfo) throws Exception {
+        stubFor(post(urlPathEqualTo("/issues"))
+            .willReturn(okJson("""
+                {"data": {"id": "issue-3", "number": "abc", "title": "Cannot log in"}}
+                """)));
+
+        var task = Create.builder()
+            .id(IdUtils.create())
+            .type(Create.class.getName())
+            .baseUrl(Property.ofValue(wireMockRuntimeInfo.getHttpBaseUrl()))
+            .apiToken(Property.ofValue("test-token"))
+            .title(Property.ofValue("Cannot log in"))
+            .bodyHtml(Property.ofValue("<p>Help</p>"))
+            .build();
+
+        var output = task.run(runContextFactory.of(Map.of()));
+
+        assertThat(output.getIssueNumber(), is(nullValue()));
     }
 
     @Test
