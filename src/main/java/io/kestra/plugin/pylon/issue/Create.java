@@ -52,6 +52,10 @@ import java.util.Map;
                     title: "{{ inputs.subject }}"
                     bodyHtml: "{{ inputs.description }}"
                     requesterEmail: "customer@example.com"
+
+                  - id: log_issue_url
+                    type: io.kestra.plugin.core.log.Log
+                    message: "Created Pylon issue: {{ outputs.create_issue.issueUrl }}"
                 """
         )
     }
@@ -103,11 +107,11 @@ public class Create extends AbstractPylon implements RunnableTask<Create.Output>
     private Property<String> teamId;
 
     @Schema(title = "Priority", description = "Priority of the issue. Leave blank to use Pylon's default.")
-    @PluginProperty(group = "processing")
+    @PluginProperty(group = "advanced")
     private Property<Priority> priority;
 
     @Schema(title = "Tags", description = "Tags to apply to the issue.")
-    @PluginProperty(group = "processing")
+    @PluginProperty(group = "advanced")
     private Property<List<String>> tags;
 
     @Schema(
@@ -156,6 +160,8 @@ public class Create extends AbstractPylon implements RunnableTask<Create.Output>
             return Output.builder()
                 .issue(issue)
                 .issueId(String.valueOf(issue.get("id")))
+                .issueUrl(issue.get("link") instanceof String link ? link : null)
+                .issueNumber(issue.get("number") instanceof Number number ? number.intValue() : null)
                 .build();
         }
     }
@@ -168,5 +174,17 @@ public class Create extends AbstractPylon implements RunnableTask<Create.Output>
 
         @Schema(title = "Issue ID", description = "Pylon-assigned identifier of the newly created issue.")
         private final String issueId;
+
+        @Schema(
+            title = "Issue URL",
+            description = "Link to the issue in Pylon, taken from the response's `link` field. Null if the API response omits it."
+        )
+        private final String issueUrl;
+
+        @Schema(
+            title = "Issue number",
+            description = "Human-readable issue number, taken from the response's `number` field. Null if the field is missing or not numeric."
+        )
+        private final Integer issueNumber;
     }
 }

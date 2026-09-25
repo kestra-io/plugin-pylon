@@ -96,15 +96,15 @@ public class Update extends AbstractPylon implements RunnableTask<Update.Output>
     private Property<String> teamId;
 
     @Schema(title = "Account ID", description = "Pylon account to move the issue to. Pass an empty string to remove it (requires `requesterId`).")
-    @PluginProperty(group = "processing")
+    @PluginProperty(group = "main")
     private Property<String> accountId;
 
     @Schema(title = "Requester ID", description = "Pylon contact to set as the issue's requester. Pass an empty string to remove it.")
-    @PluginProperty(group = "processing")
+    @PluginProperty(group = "main")
     private Property<String> requesterId;
 
     @Schema(title = "Tags", description = "Tags to set on the issue; replaces the existing tag set exactly.")
-    @PluginProperty(group = "processing")
+    @PluginProperty(group = "advanced")
     private Property<List<String>> tags;
 
     @Schema(title = "Issue type", description = "Upgrade a conversation to a support ticket. Cannot be downgraded from `TICKET` back to `CONVERSATION`.")
