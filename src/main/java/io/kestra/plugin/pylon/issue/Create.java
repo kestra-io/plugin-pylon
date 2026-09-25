@@ -20,7 +20,6 @@ import lombok.experimental.SuperBuilder;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @SuperBuilder
 @ToString
@@ -161,7 +160,7 @@ public class Create extends AbstractPylon implements RunnableTask<Create.Output>
             return Output.builder()
                 .issue(issue)
                 .issueId(String.valueOf(issue.get("id")))
-                .issueUrl(Optional.ofNullable(issue.get("link")).map(String::valueOf).orElse(null))
+                .issueUrl(issue.get("link") instanceof String link ? link : null)
                 .issueNumber(issue.get("number") instanceof Number number ? number.intValue() : null)
                 .build();
         }
