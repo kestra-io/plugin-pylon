@@ -112,7 +112,7 @@ public class Create extends AbstractPylon implements RunnableTask<Create.Output>
 
     @Schema(title = "Priority", description = "Priority of the issue. Leave blank to use Pylon's default.")
     @PluginProperty(group = "advanced")
-    @TicketingField(role = TicketingField.Role.CASE_SEVERITY, valueMap = {"CRITICAL=URGENT", "HIGH=HIGH", "MEDIUM=MEDIUM", "LOW=LOW"})
+    @TicketingField(role = TicketingField.Role.CASE_SEVERITY, valueMap = {@TicketingField.Mapping(from = "CRITICAL", to = "URGENT"), @TicketingField.Mapping(from = "HIGH", to = "HIGH"), @TicketingField.Mapping(from = "MEDIUM", to = "MEDIUM"), @TicketingField.Mapping(from = "LOW", to = "LOW")})
     private Property<Priority> priority;
 
     @Schema(title = "Tags", description = "Tags to apply to the issue.")
