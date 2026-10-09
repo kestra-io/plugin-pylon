@@ -85,7 +85,7 @@ public class Create extends AbstractPylon implements RunnableTask<Create.Output>
     @Schema(title = "Issue body (HTML)", description = "HTML content of the issue's first message.")
     @NotNull
     @PluginProperty(group = "main")
-    @TicketingField(role = TicketingField.Role.CASE_DESCRIPTION)
+    @TicketingField(role = TicketingField.Role.CASE_DESCRIPTION_HTML)
     private Property<String> bodyHtml;
 
     @Schema(
@@ -112,6 +112,7 @@ public class Create extends AbstractPylon implements RunnableTask<Create.Output>
 
     @Schema(title = "Priority", description = "Priority of the issue. Leave blank to use Pylon's default.")
     @PluginProperty(group = "advanced")
+    @TicketingField(role = TicketingField.Role.CASE_SEVERITY, valueMap = {"CRITICAL=URGENT", "HIGH=HIGH", "MEDIUM=MEDIUM", "LOW=LOW"})
     private Property<Priority> priority;
 
     @Schema(title = "Tags", description = "Tags to apply to the issue.")
