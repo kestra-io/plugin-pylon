@@ -5,6 +5,7 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
+import io.kestra.core.models.tasks.TicketingTaskInterface;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.pylon.AbstractPylon;
 import io.kestra.plugin.pylon.PylonClient;
@@ -60,7 +61,7 @@ import java.util.Map;
         )
     }
 )
-public class Create extends AbstractPylon implements RunnableTask<Create.Output> {
+public class Create extends AbstractPylon implements RunnableTask<Create.Output>, TicketingTaskInterface {
 
     public enum Priority {
         URGENT,
