@@ -3,8 +3,10 @@ package io.kestra.plugin.pylon.issue;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.annotations.TicketingField;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
+import io.kestra.core.models.tasks.TicketingTaskInterface;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.pylon.AbstractPylon;
 import io.kestra.plugin.pylon.PylonClient;
@@ -60,7 +62,7 @@ import java.util.Map;
         )
     }
 )
-public class Create extends AbstractPylon implements RunnableTask<Create.Output> {
+public class Create extends AbstractPylon implements RunnableTask<Create.Output>, TicketingTaskInterface {
 
     public enum Priority {
         URGENT,
@@ -77,11 +79,13 @@ public class Create extends AbstractPylon implements RunnableTask<Create.Output>
     @Schema(title = "Issue title", description = "Short summary of the issue shown in Pylon.")
     @NotNull
     @PluginProperty(group = "main")
+    @TicketingField(role = TicketingField.Role.CASE_TITLE)
     private Property<String> title;
 
     @Schema(title = "Issue body (HTML)", description = "HTML content of the issue's first message.")
     @NotNull
     @PluginProperty(group = "main")
+    @TicketingField(role = TicketingField.Role.CASE_DESCRIPTION_HTML)
     private Property<String> bodyHtml;
 
     @Schema(
@@ -108,6 +112,7 @@ public class Create extends AbstractPylon implements RunnableTask<Create.Output>
 
     @Schema(title = "Priority", description = "Priority of the issue. Leave blank to use Pylon's default.")
     @PluginProperty(group = "advanced")
+    @TicketingField(role = TicketingField.Role.CASE_SEVERITY, valueMap = {@TicketingField.Mapping(from = "CRITICAL", to = "URGENT"), @TicketingField.Mapping(from = "HIGH", to = "HIGH"), @TicketingField.Mapping(from = "MEDIUM", to = "MEDIUM"), @TicketingField.Mapping(from = "LOW", to = "LOW")})
     private Property<Priority> priority;
 
     @Schema(title = "Tags", description = "Tags to apply to the issue.")
@@ -179,12 +184,14 @@ public class Create extends AbstractPylon implements RunnableTask<Create.Output>
             title = "Issue URL",
             description = "Link to the issue in Pylon, taken from the response's `link` field. Null if the API response omits it."
         )
+        @TicketingField(role = TicketingField.Role.TICKET_URL)
         private final String issueUrl;
 
         @Schema(
             title = "Issue number",
             description = "Human-readable issue number, taken from the response's `number` field. Null if the field is missing or not numeric."
         )
+        @TicketingField(role = TicketingField.Role.TICKET_KEY)
         private final Integer issueNumber;
     }
 }
